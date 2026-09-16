@@ -1,8 +1,8 @@
 {
   "name": "dsh-plugin-background-browser",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
-  "description": "Session-owned headless browser for DeepSeek Harness",
+  "description": "DeepSeek Harness 后台浏览器插件：会话隔离、侧栏预览与人工接管。",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,10 @@
     "dist",
     "cordis.patch.yml",
     "playwright.config.json",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "screenshots.json",
+    "assets"
   ],
   "bin": {
     "dsh-browser-install": "./dist/install.js"
@@ -46,7 +49,6 @@
   },
   "dependencies": {
     "@playwright/mcp": "0.0.80",
-    "@deepseek-ai/schemastery": "3.18.2",
     "playwright": "1.63.0-alpha-2026-08-31"
   },
   "peerDependencies": {
@@ -54,6 +56,24 @@
     "@deepseek-ai/dsh-agent": "0.1.5-rc.2",
     "@deepseek-ai/dsh-tools": "0.1.5-rc.2",
     "@deepseek-ai/dsh-system-prompt": "0.1.5-rc.2",
-    "@deepseek-ai/dsh-mcp-client": "0.1.5-rc.2"
-  }
+    "@deepseek-ai/dsh-mcp-client": "0.1.5-rc.2",
+    "@deepseek-ai/schemastery": "3.18.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YuZtArt/dsh-plugin-background-browser.git",
+    "directory": "packages/browser"
+  },
+  "homepage": "https://github.com/YuZtArt/dsh-plugin-background-browser#readme",
+  "bugs": {
+    "url": "https://github.com/YuZtArt/dsh-plugin-background-browser/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "browser",
+    "playwright",
+    "mcp"
+  ]
 }

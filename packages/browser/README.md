@@ -4,7 +4,9 @@
 
 ## 安装
 
-插件 **0.3.0** 适配 **DSH 0.1.5-rc.2**，不需要升级到 alpha。需要 Node 22.19+ 或 24+。所有 DSH 依赖均固定为 rc.2，不混用 alpha 包；此前插件 0.1.0 是 alpha 版本用包，请改装 0.2.1。
+插件 **0.3.1** 适配 **DSH 0.1.5-rc.2**，不需要升级到 alpha。需要 Node 22.19+ 或 24+。所有 DSH 依赖均固定为 rc.2，不混用 alpha 包；此前插件 0.1.0 是 alpha 版本用包，请改装 0.2.1。
+
+推荐从 [GitHub Release](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/tag/v0.3.1) 下载预构建包。
 
 在本项目中：
 
@@ -23,7 +25,7 @@ npm run pack:browser
 ```powershell
 # 仅新 profile 第一次执行；dump-config 不启动应用。
 dsh --profile browser-dev --from-default-profile web --dump-config
-dsh plugin --profile browser-dev add C:/path/to/dsh-plugin-background-browser-0.3.0.tgz
+dsh plugin --profile browser-dev add C:/path/to/dsh-plugin-background-browser-0.3.1.tgz
 # 在运行 DSH 的同一用户账户下安装浏览器，仅首次需要。
 dsh plugin --profile browser-dev exec dsh-browser-install
 dsh --profile browser-dev --dump-config
@@ -42,7 +44,7 @@ dsh --profile browser-dev --no-open
 
 ```powershell
 $desktopProfile = '替换为桌面客户端当前档案名'
-dsh plugin --profile $desktopProfile add C:/path/to/dsh-plugin-background-browser-0.3.0.tgz
+dsh plugin --profile $desktopProfile add C:/path/to/dsh-plugin-background-browser-0.3.1.tgz
 dsh plugin --profile $desktopProfile exec dsh-browser-install
 ```
 
@@ -106,3 +108,15 @@ MCP 直接挂载在宿主提供的 `agent.ctx` 子生命周期中，不再通过
 新增「接管浏览器／交还助手」。人工操作与 agent 工具共用串行队列，接管会等待已开始的工具调用结束；接管期间后续浏览器工具调用会返回等待用户的提示，不暂停整个 agent。输入使用已显示页面的稳定 ID 和相对坐标，避免标签页关闭后按旧索引操作另一个页面。
 
 测试使用本地登录表单，覆盖人工点击、中文密码输入、全选、滚动、提交、交还后模型工具读取登录 Cookie、未接管时拒绝输入。尚未验证所有外部站点或 Desktop 2.0.10 的完整运行流程。
+
+## 界面截图
+
+实际客户端组件在本地测试环境的截图，非完整桌面端截图。
+
+![浏览器预览](assets/preview.png)
+
+![人工接管](assets/manual-control.png)
+
+## 许可证
+
+[MIT](LICENSE)。上游依赖保留各自许可证。

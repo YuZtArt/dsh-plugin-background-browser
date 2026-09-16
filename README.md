@@ -4,7 +4,7 @@
 
 让 DeepSeek Harness 助手直接操作隐藏的浏览器，无需手动打开 Chrome。项目采用 DSH 的 **Cordis 插件机制**，不是 DeepSeek API 客户端。
 
-当前浏览器插件版本：**0.3.0** · 目标宿主：**DSH 0.1.5-rc.2**。
+当前浏览器插件版本：**0.3.1** · 目标宿主：**DSH 0.1.5-rc.2**。
 
 ## 功能与当前状态
 
@@ -14,6 +14,14 @@
 - **桌面运行兼容处理**：MCP 子进程显式启用 Electron-as-node，并使用宿主 agent 作用域避免工具撞名。
 
 **侧栏状态说明：** 用户在 Desktop 2.0.10 上反馈 0.2.1 没有出现入口；0.2.2 已修复一条客户端发现路径的包导出缺失，并通过回归测试，但尚未确认解决该桌面环境的问题。不要将当前版本视为已完整验证的 Codex 式内置浏览器。
+
+## 界面截图
+
+以下为实际客户端组件在本地测试环境中的截图，不是完整桌面客户端截图。
+
+![浏览器预览](packages/browser/assets/preview.png)
+
+![人工接管](packages/browser/assets/manual-control.png)
 
 ## 环境要求
 
@@ -28,13 +36,13 @@
 
 ## 安装
 
-先获取构建后的 `dsh-plugin-background-browser-0.3.0.tgz`，或按下方步骤自行构建。**安装到桌面客户端实际使用的 profile**，并使用相同的 DSH_HOME 和用户账户。不要另外创建一个 profile 后期待它出现在现有桌面端。
+从 [GitHub Release 下载预构建安装包](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/download/v0.3.1/dsh-plugin-background-browser-0.3.1.tgz)，或按下方步骤自行构建。**安装到桌面客户端实际使用的 profile**，并使用相同的 DSH_HOME 和用户账户。不要另外创建一个 profile 后期待它出现在现有桌面端。
 
 在能调用该桌面环境 DSH CLI 的 PowerShell 中：
 
 ```powershell
 $desktopProfile = '替换为当前档案名称'
-$pluginPackage = (Resolve-Path ./dsh-plugin-background-browser-0.3.0.tgz).Path
+$pluginPackage = (Resolve-Path ./dsh-plugin-background-browser-0.3.1.tgz).Path
 dsh plugin --profile $desktopProfile add $pluginPackage
 # 仅首次安装浏览器时需要；已经安装成功则跳过。
 dsh plugin --profile $desktopProfile exec dsh-browser-install
@@ -99,3 +107,7 @@ CHANGELOG.md                版本变更
 - [Playwright MCP](https://github.com/microsoft/playwright-mcp)
 
 提交问题时请附 DSH 和桌面端版本、插件版本、操作步骤及去除凭据的报错。文档和问题交流以中文为主。
+
+## 许可证
+
+项目采用 [MIT](LICENSE) 许可证。Playwright MCP、Playwright 和 DSH 等依赖保留各自许可证。源码仓库已公开，npm 包仍标记 `private` 以避免误发布；安装请使用 Release 中的预构建包。

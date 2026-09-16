@@ -167,6 +167,7 @@ test('DSH tools drive a real background browser, isolate sessions and clean up',
     }
     await uiAction(() => ui.getByRole('button', { name: '接管浏览器', exact: true }).click())
     await ui.getByRole('button', { name: '交还助手', exact: true }).waitFor()
+    await ui.screenshot({ path: fileURLToPath(new URL('../.dsh/browser-manual-control.png', import.meta.url)) })
     const blocked = await ctx.tools.execute({ agent: first.agent, name: 'mcp__playwright-mcp__browser_navigate', arguments: { url: url + '/inspect' }, callId: ToolCallId('blocked-manual'), signal: AbortSignal.timeout(30000) }).catch(error => ({ message: error.message }))
     assert.match(JSON.stringify(blocked), /User is controlling the browser/)
     async function imageClick(x, y) {
