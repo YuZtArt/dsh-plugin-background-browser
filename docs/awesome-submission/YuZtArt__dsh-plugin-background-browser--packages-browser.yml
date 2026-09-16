@@ -4,4 +4,4 @@ category: browser
 description:
   en: 'Session-isolated background browser with Playwright MCP tools and an experimental sidebar for preview and manual control.'
   zh: '提供会话隔离的后台浏览器、Playwright MCP 工具，以及支持预览和人工接管的实验性侧栏。'
-tarball: https://github.com/YuZtArt/dsh-plugin-background-browser/releases/download/v0.3.1/dsh-plugin-background-browser-0.3.1.tgz
+tarball: https://github.com/YuZtArt/dsh-plugin-background-browser/releases/download/v0.4.0/dsh-plugin-background-browser-0.4.0.tgz

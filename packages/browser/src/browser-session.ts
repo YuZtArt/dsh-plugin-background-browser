@@ -43,7 +43,7 @@ export class BrowserSession {
 
   private async capture(): Promise<BrowserFrame> {
     const pages = this.context.pages().filter(page => !page.isClosed())
-    if (!pages.length) return { status: 'idle', tabs: [], selected: -1 }
+    if (!pages.length) return { status: 'ready', tabs: [], selected: -1 }
     const focused = await Promise.all(pages.map(page => page.evaluate(() => document.hasFocus()).catch(() => false)))
     const selected = focused.lastIndexOf(true) < 0 ? pages.length - 1 : focused.lastIndexOf(true)
     const tabs = await Promise.all(pages.map(async (page, index) => ({ id: this.id(page), index, title: await page.title(), url: page.url() })))
@@ -52,10 +52,21 @@ export class BrowserSession {
   }
 
   async interact(action: Exclude<BrowserAction, { type: 'take' | 'release' }>): Promise<void> {
+    if (action.type === 'new') { await (await this.context.newPage()).bringToFront(); return }
     const page = this.context.pages().find(page => this.id(page) === action.pageId && !page.isClosed())
     if (!page) throw new Error('Page is closed; refresh the browser panel')
     await page.bringToFront()
-    if (action.type === 'click') {
+    if (action.type === 'navigate') {
+      await page.goto(action.url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    } else if (action.type === 'back') {
+      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 30000 })
+    } else if (action.type === 'forward') {
+      await page.goForward({ waitUntil: 'domcontentloaded', timeout: 30000 })
+    } else if (action.type === 'reload') {
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
+    } else if (action.type === 'close') {
+      await page.close()
+    } else if (action.type === 'click') {
       const viewport = page.viewportSize()!
       await page.mouse.click(Math.min(viewport.width - 1, action.x * viewport.width), Math.min(viewport.height - 1, action.y * viewport.height))
     } else if (action.type === 'scroll') {

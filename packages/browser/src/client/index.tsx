@@ -3,21 +3,52 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { BrowserAction, BrowserFrame } from '../protocol.js'
+import { styles } from './style.js'
 
 export const inject = ['slots', 'sidebarRightTabs']
 const id = 'dsh-background-browser'
+const paths = {
+  globe: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18',
+  back: 'm14 6-6 6 6 6M8 12h12', forward: 'm10 6 6 6-6 6M4 12h12',
+  reload: 'M20 7v5h-5M20 12a8 8 0 1 0-2 5M20 7v5',
+  close: 'm6 6 12 12M6 18 18 6', plus: 'M12 5v14M5 12h14',
+  arrow: 'M7 17 17 7M7 7h10v10', more: 'M5 12h.01M12 12h.01M19 12h.01',
+  keyboard: 'M3 6h18v12H3zM6 9h1m3 0h1m3 0h1m3 0h.01M6 12h1m3 0h1m3 0h1m3 0h.01M7 15h10',
+  hand: 'M8 12V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v6-3a1.5 1.5 0 0 1 3 0v6c0 4-2 6-6 6h-1c-2 0-3-1-4-2l-5-6c-1-2 1-3 2-2l2 2',
+  bot: 'M5 7h14v12H5zM12 3v4M9 11v2m6-2v2M9 16h6M2 10v6m20-6v6',
+  expand: 'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5',
+  pause: 'M8 5v14M16 5v14', play: 'm8 5 11 7-11 7z',
+  fit: 'M3 8V3h5m8 0h5v5M3 16v5h5m13-5v5h-5M8 12h8',
+} as const
+function Icon({ name }: { name: keyof typeof paths }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>
+}
 
 export function BrowserPanel({ browserSessionId }: { browserSessionId: string }) {
   const [input, setInput] = useState('')
   const [pending, setPending] = useState(0)
-  const tail = useRef(Promise.resolve())
-  const session = useRef(browserSessionId)
-  session.current = browserSessionId
   const [frame, setFrame] = useState<BrowserFrame>()
   const [error, setError] = useState('')
   const [paused, setPaused] = useState(false)
   const [refresh, setRefresh] = useState(0)
-  useEffect(() => { setFrame(undefined); setError(''); setInput('') }, [browserSessionId])
+  const [menu, setMenu] = useState(false)
+  const [inputOpen, setInputOpen] = useState(false)
+  const [originalSize, setOriginalSize] = useState(false)
+  const [address, setAddress] = useState('')
+  const [editingAddress, setEditingAddress] = useState(false)
+  const tail = useRef(Promise.resolve())
+  const session = useRef(browserSessionId)
+  const panel = useRef<HTMLElement>(null)
+  session.current = browserSessionId
+  const manual = frame?.manual === true
+  const active = frame?.tabs.find(tab => tab.index === frame.selected)
+  const blank = !active || active.url === 'about:blank'
+  const ready = frame?.status === 'ready'
+  useEffect(() => {
+    setFrame(undefined); setError(''); setInput(''); setInputOpen(false); setMenu(false); setAddress(''); setEditingAddress(false); setPaused(false)
+  }, [browserSessionId])
+  useEffect(() => { if (!editingAddress) setAddress(active?.url === 'about:blank' ? '' : active?.url ?? '') }, [active?.url, editingAddress])
+  useEffect(() => { if (!manual) { setInputOpen(false); setInput('') } }, [manual])
   useEffect(() => {
     if (paused) return
     const controller = new AbortController()
@@ -54,34 +85,57 @@ export function BrowserPanel({ browserSessionId }: { browserSessionId: string })
       if (session.current === owner) { setError(''); setRefresh(n => n + 1) }
     }).catch(error => { if (session.current === owner) setError(error.message) }).finally(() => setPending(n => n - 1))
   }
-  const manual = frame?.manual === true
-  const active = frame?.tabs.find(tab => tab.index === frame.selected)
-  return <section style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary, #17191e)', color: 'var(--text-primary, #e5e7eb)', font: '13px system-ui' }} aria-label="后台浏览器">
-    <header style={{ display: 'flex', gap: 8, alignItems: 'center', padding: 12, borderBottom: '1px solid #ffffff20' }}>
-      <span style={{ color: paused ? '#a1a1aa' : '#4ade80' }}>●</span>
-      <strong style={{ flex: 1 }}>浏览器 · {paused ? '预览已暂停' : '实时预览'}</strong>
-      <button type="button" onClick={() => setRefresh(value => value + 1)} disabled={paused} title="刷新画面">刷新</button>
-      <button type="button" disabled={manual} onClick={() => setPaused(value => !value)}>{paused ? '继续预览' : '暂停预览'}</button>
-    </header>
-    <div style={{ padding: '8px 12px' }}>
-      <button type="button" disabled={!frame?.image || pending > 0} onClick={() => { setPaused(false); send({ type: manual ? 'release' : 'take' }) }}>{manual ? '交还助手' : '接管浏览器'}</button>
-      <span style={{ marginLeft: 8 }}>{pending ? '操作中…' : manual ? '你正在操作' : '助手控制中'}</span>
+  const pageAction = (type: 'back' | 'forward' | 'reload') => { if (active) send({ type, pageId: active.id }) }
+  function navigate() {
+    if (!active || !address.trim()) return
+    const value = address.trim()
+    try {
+      const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(value) && !/^[^/]+:\d+(?:\/|$)/.test(value) ? value : `https://${value}`)
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error('请输入 http 或 https 网址')
+      send({ type: 'navigate', pageId: active.id, url: url.href })
+      setEditingAddress(false)
+    } catch { setError('请输入有效的网址，例如 https://example.com') }
+  }
+  return <section ref={panel} className="dsh-browser" aria-label="后台浏览器" onKeyDown={event => { if (event.key === 'Escape' && (menu || inputOpen)) { setMenu(false); setInputOpen(false); setInput(''); event.stopPropagation() } }}>
+    <style>{styles}</style>
+    <div className="bb-tabs">
+      <div className="bb-tablist" role="tablist" aria-label="网页标签页">
+        {frame?.tabs.length ? frame.tabs.map(tab => <div className={`bb-tab ${tab.index === frame.selected ? 'is-active' : ''}`} key={tab.id}>
+          <button className="bb-tab-select" role="tab" aria-selected={tab.index === frame.selected} disabled={!manual} title={tab.url} onClick={() => { setInputOpen(false); send({ type: 'tab', pageId: tab.id }) }}><Icon name="globe" /><span>{tab.title || '新标签页'}</span></button>
+          <button className="bb-icon" title="关闭标签页" aria-label={`关闭标签页：${tab.title || '新标签页'}`} disabled={!manual || pending > 0} onClick={() => send({ type: 'close', pageId: tab.id })}><Icon name="close" /></button>
+        </div>) : <div className="bb-tab is-active"><span className="bb-tab-select"><Icon name="globe" /><span>新标签页</span></span></div>}
+      </div>
+      <button className="bb-icon" title={manual ? '新建标签页' : '接管后可新建标签页'} aria-label="新建标签页" disabled={!manual || pending > 0} onClick={() => send({ type: 'new' })}><Icon name="plus" /></button>
+      <span className="bb-tabs-spacer" />
+      <button className={`bb-control ${manual ? 'is-manual' : ''}`} aria-label={manual ? '交还助手' : '接管浏览器'} title={manual ? '交还控制权，然后告诉助手继续' : '接管浏览器以登录或操作网页'} disabled={!ready || pending > 0} onClick={() => { setPaused(false); send({ type: manual ? 'release' : 'take' }) }}><Icon name={manual ? 'bot' : 'hand'} />{manual ? '交还' : '接管'}</button>
     </div>
-    <div style={{ padding: '9px 12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #ffffff20' }} title={active?.url}>
-      {active?.url ?? '等待当前会话使用浏览器'}
+    <div className="bb-toolbar">
+      <button className="bb-icon" title="后退" aria-label="后退" disabled={!manual || !active || pending > 0} onClick={() => pageAction('back')}><Icon name="back" /></button>
+      <button className="bb-icon" title="前进" aria-label="前进" disabled={!manual || !active || pending > 0} onClick={() => pageAction('forward')}><Icon name="forward" /></button>
+      <button className="bb-icon" title={manual ? '重新加载网页' : '刷新画面'} aria-label={manual ? '重新加载网页' : '刷新画面'} disabled={manual && (!active || pending > 0)} onClick={() => { if (manual) pageAction('reload'); else { setPaused(false); setRefresh(n => n + 1) } }}><Icon name="reload" /></button>
+      <form className="bb-address" onSubmit={event => { event.preventDefault(); navigate() }}>
+        <Icon name="globe" />
+        <input aria-label="网址" title={manual ? '输入网址并按回车' : '接管浏览器后可输入网址'} placeholder="输入网址" value={address} readOnly={!manual || !active} onFocus={event => { setEditingAddress(true); event.currentTarget.select() }} onBlur={event => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.parentElement?.contains(event.relatedTarget)) setEditingAddress(false) }} onChange={event => setAddress(event.target.value)} />
+        {manual && <button className="bb-icon" type="submit" aria-label="打开网址" title="打开网址" disabled={!active || !address.trim() || pending > 0}><Icon name="arrow" /></button>}
+      </form>
+      {manual && <button className="bb-icon" title="输入文本或密码" aria-label="输入文本或密码" aria-expanded={inputOpen} onClick={() => { setInputOpen(v => !v); setMenu(false); setInput('') }}><Icon name="keyboard" /></button>}
+      <button className="bb-icon" title="更多选项" aria-label="更多选项" aria-expanded={menu} onClick={() => { setMenu(v => !v); setInputOpen(false); setInput('') }}><Icon name="more" /></button>
     </div>
-    {!!frame?.tabs.length && <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '8px 12px' }}>
-      {frame.tabs.map(tab => <button type="button" disabled={!manual} onClick={() => send({ type: 'tab', pageId: tab.id })} key={tab.id} title={tab.url} style={{ padding: '5px 9px', borderRadius: 6, whiteSpace: 'nowrap', background: tab.index === frame.selected ? '#2563eb' : '#ffffff12' }}>{tab.title || '新标签页'}</button>)}
+    {menu && <div className="bb-menu" aria-label="浏览器选项">
+      <button disabled={manual} onClick={() => { setPaused(v => !v); setMenu(false) }}><Icon name={paused ? 'play' : 'pause'} />{paused ? '继续预览' : '暂停预览'}</button>
+      <button onClick={() => { setOriginalSize(v => !v); setMenu(false) }}><Icon name="fit" />{originalSize ? '适应面板宽度' : '网页原始大小'}</button>
+      <button onClick={() => { setMenu(false); const operation = document.fullscreenElement ? document.exitFullscreen() : panel.current?.requestFullscreen(); void operation?.catch(() => setError('当前宿主不支持全屏，请拖宽侧栏查看')) }}><Icon name="expand" />全屏查看</button>
     </div>}
-    {manual && <form style={{ display: 'flex', gap: 6, padding: '8px 12px' }} onSubmit={event => { event.preventDefault(); if (active && input) { send({ type: 'text', pageId: active.id, text: input }); setInput('') } }}>
-      <input type="password" autoComplete="off" aria-label="输入到网页" placeholder="先点网页输入框，再在此输入或粘贴" value={input} onChange={event => setInput(event.target.value)} style={{ minWidth: 0, flex: 1 }} />
-      <button type="submit" disabled={!input}>输入</button>
-      <button type="button" onClick={() => active && send({ type: 'key', pageId: active.id, key: 'Enter' })}>回车</button>
+    {manual && inputOpen && <form className="bb-input-panel" onSubmit={event => { event.preventDefault(); if (active && input) { send({ type: 'text', pageId: active.id, text: input }); setInput('') } }}>
+      <div className="bb-input-heading">输入到网页<button type="button" className="bb-icon" aria-label="关闭输入面板" onClick={() => { setInputOpen(false); setInput('') }}><Icon name="close" /></button></div>
+      <p>先点击网页输入框，再输入或粘贴内容。<br />内容只发送到网页，不会进入聊天。</p>
+      <div className="bb-input-row"><input type="password" autoComplete="off" aria-label="输入到网页" placeholder="支持中文、账号和密码" value={input} onChange={event => setInput(event.target.value)} /><button type="submit" disabled={!input || !active}>输入</button></div>
+      <div className="bb-input-actions"><button type="button" disabled={!active} onClick={() => active && send({ type: 'key', pageId: active.id, key: 'Tab' })}>下一项 ⇥</button><button type="button" disabled={!active} onClick={() => active && send({ type: 'key', pageId: active.id, key: 'Enter' })}>回车 ↵</button></div>
     </form>}
-    {error && <div role="alert" style={{ padding: 12, color: '#fca5a5' }}>画面暂不可用：{error}</div>}
-    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'grid', alignContent: 'start' }}>
-      {frame?.image ? <img src={frame.image} alt={active?.title ? `网页预览：${active.title}` : '当前网页预览'} style={{ width: '100%', display: 'block', cursor: manual ? 'crosshair' : 'default' }} draggable={false} tabIndex={manual ? 0 : -1}
-        onClick={event => { if (!manual || !active) return; event.currentTarget.focus(); const r = event.currentTarget.getBoundingClientRect(); send({ type: 'click', pageId: active.id, x: (event.clientX - r.left) / r.width, y: (event.clientY - r.top) / r.height }) }}
+    {error && <div className="bb-error" role="alert"><span>{error}</span><button className="bb-icon" aria-label="关闭提示" onClick={() => setError('')}><Icon name="close" /></button></div>}
+    <div className={`bb-canvas ${manual ? 'is-manual' : ''} ${originalSize ? 'is-original' : ''}`}>
+      {frame?.image && !blank ? <img src={frame.image} alt={active?.title ? `网页预览：${active.title}` : '当前网页预览'} draggable={false} tabIndex={manual ? 0 : -1}
+        onClick={event => { if (!manual || !active) return; setInputOpen(false); setInput(''); setMenu(false); event.currentTarget.focus(); const r = event.currentTarget.getBoundingClientRect(); send({ type: 'click', pageId: active.id, x: (event.clientX - r.left) / r.width, y: (event.clientY - r.top) / r.height }) }}
         onWheel={event => { if (manual && active) send({ type: 'scroll', pageId: active.id, dx: Math.max(-10000, Math.min(10000, event.deltaX)), dy: Math.max(-10000, Math.min(10000, event.deltaY)) }) }}
         onPaste={event => { if (manual && active) { event.preventDefault(); send({ type: 'text', pageId: active.id, text: event.clipboardData.getData('text') }) } }}
         onKeyDown={event => {
@@ -92,10 +146,9 @@ export function BrowserPanel({ browserSessionId }: { browserSessionId: string })
           else if (key === 'Tab' && event.shiftKey) key = 'Shift+Tab'
           if (['Enter', 'Tab', 'Shift+Tab', 'Backspace', 'Delete', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'ControlOrMeta+A'].includes(key)) { event.preventDefault(); send({ type: 'key', pageId: active.id, key }) }
           else if (key.length === 1) { event.preventDefault(); send({ type: 'text', pageId: active.id, text: key }) }
-        }} />
-        : <div style={{ padding: '48px 24px', textAlign: 'center', color: '#a1a1aa', lineHeight: 1.8 }}>让助手打开网页后，画面会显示在这里。<br />关闭此面板不会关闭后台浏览器。</div>}
+        }} /> : <div className="bb-empty"><Icon name="globe" /><strong>{ready ? '开始浏览' : '等待浏览'}</strong><p>{ready ? manual ? '输入网址，开始浏览网页。' : '让助手打开网页，或接管后输入网址。' : '让助手打开网页后，画面会显示在这里。'}</p></div>}
     </div>
-    <footer style={{ padding: '8px 12px', color: '#a1a1aa', borderTop: '1px solid #ffffff20', fontSize: 11 }}>{manual ? '接管期间助手不能操作浏览器；完成后交还并告知助手继续。中文输入请使用上方输入框。' : '跟随当前会话 · 登录时点击「接管浏览器」'}</footer>
+    <footer className="bb-status"><span className="bb-status-label"><i className={`bb-dot ${ready && !paused ? 'is-live' : ''}`} />{pending ? '正在操作' : manual ? '你正在控制' : paused ? '预览已暂停' : ready ? '助手控制中' : '等待助手'}</span><span className="bb-status-hint">{manual ? '完成后交还，并告诉助手继续' : '登录时可接管浏览器'}</span></footer>
   </section>
 }
 

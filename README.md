@@ -4,20 +4,22 @@
 
 让 DeepSeek Harness 助手直接操作隐藏的浏览器，无需手动打开 Chrome。项目采用 DSH 的 **Cordis 插件机制**，不是 DeepSeek API 客户端。
 
-当前浏览器插件版本：**0.3.1** · 目标宿主：**DSH 0.1.5-rc.2**。
+当前浏览器插件版本：**0.4.0** · 目标宿主：**DSH 0.1.5-rc.2**。
 
 ## 功能与当前状态
 
 - **后台网页操作**：导航、读取页面、点击、输入、标签页管理、JavaScript 求值和截图，复用 Playwright MCP 工具。
 - **会话隔离**：每个活动 agent 独立浏览器和 Cookie，跨轮次保留状态，卸载时清理。
-- **侧栏交互（实验性）**：在 DSH 原生右侧栏注册「浏览器」卡片，约每 750ms 刷新当前网页截图；支持人工接管、点击、输入、滚动和切换标签页。
+- **侧栏交互（实验性）**：在 DSH 原生右侧栏注册「浏览器」卡片，约每 750ms 刷新当前网页截图；支持人工接管、点击、输入、滚动和标签页管理；提供地址栏、后退、前进与刷新。
 - **桌面运行兼容处理**：MCP 子进程显式启用 Electron-as-node，并使用宿主 agent 作用域避免工具撞名。
 
-**侧栏状态说明：** 用户在 Desktop 2.0.10 上反馈 0.2.1 没有出现入口；0.2.2 已修复一条客户端发现路径的包导出缺失，并通过回归测试，但尚未确认解决该桌面环境的问题。不要将当前版本视为已完整验证的 Codex 式内置浏览器。
+**验证状态：** 侧栏交互与导航已通过真实浏览器组件集成测试；完整 Desktop 2.0.10 运行流程仍待实机验证。
 
 ## 界面截图
 
 以下为实际客户端组件在本地测试环境中的截图，不是完整桌面客户端截图。
+
+![新标签页](packages/browser/assets/empty.png)
 
 ![浏览器预览](packages/browser/assets/preview.png)
 
@@ -36,13 +38,13 @@
 
 ## 安装
 
-从 [GitHub Release 下载预构建安装包](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/download/v0.3.1/dsh-plugin-background-browser-0.3.1.tgz)，或按下方步骤自行构建。**安装到桌面客户端实际使用的 profile**，并使用相同的 DSH_HOME 和用户账户。不要另外创建一个 profile 后期待它出现在现有桌面端。
+从 [GitHub Release 下载预构建安装包](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/download/v0.4.0/dsh-plugin-background-browser-0.4.0.tgz)，或按下方步骤自行构建。**安装到桌面客户端实际使用的 profile**，并使用相同的 DSH_HOME 和用户账户。不要另外创建一个 profile 后期待它出现在现有桌面端。
 
 在能调用该桌面环境 DSH CLI 的 PowerShell 中：
 
 ```powershell
 $desktopProfile = '替换为当前档案名称'
-$pluginPackage = (Resolve-Path ./dsh-plugin-background-browser-0.3.1.tgz).Path
+$pluginPackage = (Resolve-Path ./dsh-plugin-background-browser-0.4.0.tgz).Path
 dsh plugin --profile $desktopProfile add $pluginPackage
 # 仅首次安装浏览器时需要；已经安装成功则跳过。
 dsh plugin --profile $desktopProfile exec dsh-browser-install
@@ -56,11 +58,13 @@ dsh plugin --profile $desktopProfile exec dsh-browser-install
 
 > 使用后台浏览器打开 https://example.com，读取页面标题并截图。
 
-查看画面时，展开原生右侧栏，点击 `＋`，在「开始」页选择「浏览器」。登录时点击「接管浏览器」，再点击网页输入框。可直接键盘输入，也可使用上方遮罩输入框输入/粘贴中文、账号或密码，点击「输入」送入网页当前焦点。
+查看画面时，展开原生右侧栏，点击 `＋`，在「开始」页选择「浏览器」。登录时点击「接管浏览器」，再点击网页输入框。可直接键盘输入；中文或密码可点击地址栏旁的键盘图标，展开输入面板后发送到网页当前焦点。
 
 接管期间助手的浏览器工具会被阻止；登录完成后点击「交还助手」，并在对话中告诉助手继续。不要把密码发到聊天里。关闭面板不会自动交还控制权，需要重新打开后交还。
 
 若只有「工作区文件」卡片，说明浏览器前端入口尚未出现在当前界面；后台工具成功并不代表前端已加载。先确认安装版本、当前 profile 和完整重启，再检查客户端加载日志。详细说明见 [浏览器插件文档](packages/browser/README.md)。
+
+「更多选项」中可暂停预览、切换网页原始大小或全屏查看。地址栏仅在接管后可导航，支持 HTTP/HTTPS 网址；暂不提供搜索和下载管理。
 
 ## 从源码构建
 
