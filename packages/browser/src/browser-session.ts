@@ -51,7 +51,7 @@ export class BrowserSession {
     return { status: 'ready', tabs, selected, image: `data:image/jpeg;base64,${image.toString('base64')}` }
   }
 
-  async interact(action: Exclude<BrowserAction, { type: 'take' | 'release' }>): Promise<void> {
+  async interact(action: BrowserAction): Promise<void> {
     if (action.type === 'new') { await (await this.context.newPage()).bringToFront(); return }
     const page = this.context.pages().find(page => this.id(page) === action.pageId && !page.isClosed())
     if (!page) throw new Error('Page is closed; refresh the browser panel')

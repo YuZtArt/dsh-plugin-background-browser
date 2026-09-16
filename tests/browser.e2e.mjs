@@ -167,11 +167,8 @@ test('DSH tools drive a real background browser, isolate sessions and clean up',
       await action()
       assert.equal((await response).status(), 200)
     }
-    await uiAction(() => ui.getByRole('button', { name: '接管浏览器', exact: true }).click())
-    await ui.getByRole('button', { name: '交还助手', exact: true }).waitFor()
+    assert.equal(await ui.getByRole('button', { name: '接管浏览器', exact: true }).count(), 0)
     await ui.screenshot({ path: fileURLToPath(new URL('../.dsh/browser-manual-control.png', import.meta.url)) })
-    const blocked = await ctx.tools.execute({ agent: first.agent, name: 'mcp__playwright-mcp__browser_navigate', arguments: { url: url + '/inspect' }, callId: ToolCallId('blocked-manual'), signal: AbortSignal.timeout(30000) }).catch(error => ({ message: error.message }))
-    assert.match(JSON.stringify(blocked), /User is controlling the browser/)
     async function imageClick(x, y) {
       const picture = ui.getByRole('img')
       const box = await picture.boundingBox()
@@ -211,16 +208,17 @@ test('DSH tools drive a real background browser, isolate sessions and clean up',
     await uiAction(() => ui.getByRole('button', { name: '关闭标签页：新标签页', exact: true }).last().click())
     await ui.getByRole('img', { name: '网页预览：Signed in', exact: true }).waitFor()
     await uiAction(() => ui.getByRole('img').dispatchEvent('wheel', { deltaX: 0, deltaY: 400 }))
-    await uiAction(() => ui.getByRole('button', { name: '交还助手', exact: true }).click())
-    await ui.getByRole('button', { name: '接管浏览器', exact: true }).waitFor()
     assert.match(await run(first, 'browser_snapshot'), /Signed in/)
     assert.match(await run(first, 'browser_evaluate', { function: '() => window.scrollY > 0' }), /true/)
     await run(first, 'browser_navigate', { url: url + '/inspect' })
     assert.match(await run(first, 'browser_snapshot'), /dsh_login=ok/)
+    const oldFrame = await (await preview('background-first')).json()
+    await run(first, 'browser_snapshot')
     const rejectedInput = await fetch(`${previewOrigin}/api/dsh-background-browser/frame?sessionId=background-first`, {
-      method: 'POST', headers: { ...previewHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'text', pageId: '1', text: 'should not type' }),
+      method: 'POST', headers: { ...previewHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ revision: oldFrame.revision, action: { type: 'text', pageId: oldFrame.tabs[oldFrame.selected].id, text: 'stale input' } }),
     })
     assert.equal(rejectedInput.status, 503)
+    assert.match(await rejectedInput.text(), /助手已更新页面/)
     await ui.evaluate(() => window.showSession('unrelated-session'))
     await ui.getByText('让助手打开网页后，画面会显示在这里。').waitFor()
     assert.equal(await ui.getByRole('img').count(), 0)

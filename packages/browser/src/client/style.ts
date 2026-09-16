@@ -18,10 +18,6 @@ export const styles = `
 .bb-tab .bb-icon{width:22px;height:22px;margin-right:4px}
 .bb-tab .bb-icon svg{width:12px;height:12px}
 .bb-tabs-spacer{flex:1}
-.bb-control{display:flex;align-items:center;gap:5px;padding:4px 8px!important;border-radius:6px;white-space:nowrap;color:var(--bb-muted)!important}
-.bb-control:hover:not(:disabled){background:var(--bb-hover)}
-.bb-control.is-manual{color:var(--bb-accent)!important;background:#a9c7b510}
-.bb-control svg{width:13px;height:13px}
 .bb-toolbar{height:43px;display:flex;align-items:center;gap:3px;padding:5px 8px 7px;border-bottom:1px solid var(--bb-border);flex-shrink:0}
 .bb-address{display:flex;align-items:center;gap:6px;flex:1;min-width:0;height:29px;margin:0 4px;background:#ffffff08;border:1px solid transparent;border-radius:7px;padding:0 8px;color:var(--bb-muted)}
 .bb-address:focus-within{border-color:#ffffff26;background:var(--bb-surface)}
@@ -32,7 +28,7 @@ export const styles = `
 .bb-address button svg{width:13px;height:13px}
 .bb-canvas{min-height:0;flex:1;overflow:auto;position:relative;background:var(--bb-bg);scrollbar-width:thin;scrollbar-color:#4a4a4a transparent}
 .bb-canvas img{display:block;width:100%;max-width:none;outline-offset:-2px}
-.bb-canvas.is-manual img{cursor:default}
+.bb-canvas.is-interactive img{cursor:default}
 .bb-canvas.is-original img{width:1280px}
 .bb-empty{height:100%;min-height:210px;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:32px;text-align:center;color:var(--bb-muted);gap:10px}
 .bb-empty>svg{width:29px;height:29px;stroke-width:1.35;margin-bottom:4px;color:#888}

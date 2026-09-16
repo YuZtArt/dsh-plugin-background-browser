@@ -4,9 +4,9 @@
 
 ## 安装
 
-插件 **0.4.0** 适配 **DSH 0.1.5-rc.2**，不需要升级到 alpha。需要 Node 22.19+ 或 24+。所有 DSH 依赖均固定为 rc.2，不混用 alpha 包；此前插件 0.1.0 是 alpha 版本用包，请改装 0.2.1。
+插件 **0.5.0** 适配 **DSH 0.1.5-rc.2**，不需要升级到 alpha。需要 Node 22.19+ 或 24+。所有 DSH 依赖均固定为 rc.2，不混用 alpha 包；此前插件 0.1.0 是 alpha 版本用包，请改装 0.2.1。
 
-推荐从 [GitHub Release](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/tag/v0.4.0) 下载预构建包。
+推荐从 [GitHub Release](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/tag/v0.5.0) 下载预构建包。
 
 在本项目中：
 
@@ -25,7 +25,7 @@ npm run pack:browser
 ```powershell
 # 仅新 profile 第一次执行；dump-config 不启动应用。
 dsh --profile browser-dev --from-default-profile web --dump-config
-dsh plugin --profile browser-dev add C:/path/to/dsh-plugin-background-browser-0.4.0.tgz
+dsh plugin --profile browser-dev add C:/path/to/dsh-plugin-background-browser-0.5.0.tgz
 # 在运行 DSH 的同一用户账户下安装浏览器，仅首次需要。
 dsh plugin --profile browser-dev exec dsh-browser-install
 dsh --profile browser-dev --dump-config
@@ -44,13 +44,13 @@ dsh --profile browser-dev --no-open
 
 ```powershell
 $desktopProfile = '替换为桌面客户端当前档案名'
-dsh plugin --profile $desktopProfile add C:/path/to/dsh-plugin-background-browser-0.4.0.tgz
+dsh plugin --profile $desktopProfile add C:/path/to/dsh-plugin-background-browser-0.5.0.tgz
 dsh plugin --profile $desktopProfile exec dsh-browser-install
 ```
 
 命令须使用与桌面端相同的 DSH_HOME、用户账户和兼容 Node。安装后重启桌面端 DSH 服务，在会话原生右侧栏的新增标签页/引导入口选择「浏览器」，让助手打开网页即可观看。若启用了替代原生右侧栏的扩展，需确认它仍保留原生标签页入口；尚未在用户实际安装的桌面客户端验证该组合。
 
-面板显示当前网址、标签页和约每 750ms 更新的截图，提供暂停/继续和刷新。0.3.0 支持接管后通过截图坐标操作同一个浏览器，包括点击、键盘输入、粘贴、滚动和标签页切换。收起或关闭面板不终止后台任务，切换会话后跟随对应浏览器。登录时点击「接管浏览器」，完成后点击「交还助手」并通知助手继续；关闭面板不会自动交还控制权。中文及密码可通过工具栏键盘图标展开的输入框输入到网页当前焦点，输入内容不进入聊天工具参数。第三方验证码兼容性仍取决于网站；不支持文件上传、拖拽或系统通行密钥。
+面板显示当前网址、标签页和约每 750ms 更新的截图，提供暂停/继续和刷新。0.5.0 支持直接通过截图坐标操作同一个浏览器，包括点击、键盘输入、粘贴、滚动和标签页切换。收起或关闭面板不终止后台任务，切换会话后跟随对应浏览器。无需接管或交还。用户直接操作，AI 在队列中优先；登录完成后通知助手继续。中文及密码可通过工具栏键盘图标展开的输入框输入到网页当前焦点，输入内容不进入聊天工具参数。第三方验证码兼容性仍取决于网站；不支持文件上传、拖拽或系统通行密钥。
 
 ## 配置
 
@@ -79,7 +79,7 @@ dsh plugin --profile $desktopProfile exec dsh-browser-install
 - 浏览器工具在 Session 首次组装模型提示词时连接，组装会等待工具就绪；同时启动隐藏的浏览器引擎。
 - 一个活动 Session 的多个轮次共享页面和 Cookie；不同 Session 隔离。
 - 关闭 Session 或卸载插件会关闭自有资源；重启、恢复或 fork 不恢复浏览器登录状态。
-- 登录、验证码等需要人工操作的网页可能阻塞任务；可通过侧栏人工接管，第三方网站登录兼容性仍需实际验证。
+- 登录、验证码等需要人工操作的网页可能阻塞任务；可直接在侧栏交互，第三方网站登录兼容性仍需实际验证。
 - 截图可保存到文件。图片进入模型还依赖 DSH 附件存储和模型的图片输入能力。
 - 浏览器权限遵循宿主工具管线；插件不替用户绕过授权。
 
@@ -103,7 +103,7 @@ MCP 直接挂载在宿主提供的 `agent.ctx` 子生命周期中，不再通过
 
 升级后完全退出并重开桌面客户端（加载器会缓存扫描结果），点击右侧栏 `＋`，在「开始」页应看到「浏览器」卡片。若仍只有「工作区文件」，需要检查前端加载日志及实际安装版本，不必重装 Chromium。
 
-## 0.3.0 人工接管
+## 历史版本：0.3.0 人工接管（0.5.0 已替换）
 
 新增「接管浏览器／交还助手」。人工操作与 agent 工具共用串行队列，接管会等待已开始的工具调用结束；接管期间后续浏览器工具调用会返回等待用户的提示，不暂停整个 agent。输入使用已显示页面的稳定 ID 和相对坐标，避免标签页关闭后按旧索引操作另一个页面。
 
@@ -115,7 +115,7 @@ MCP 直接挂载在宿主提供的 `agent.ctx` 子生命周期中，不再通过
 
 ![浏览器预览](assets/preview.png)
 
-![人工接管](assets/manual-control.png)
+![共享交互](assets/manual-control.png)
 
 ## 许可证
 
@@ -124,3 +124,7 @@ MCP 直接挂载在宿主提供的 `agent.ctx` 子生命周期中，不再通过
 ## 0.4.0 浏览器界面
 
 采用紧凑深色标签栏、地址栏与图标工具栏。接管后支持网址导航、后退、前进、刷新、新建和关闭标签页。键盘图标按需展开中文/密码输入；更多菜单提供暂停预览、原始大小和全屏。空白页显示开始浏览提示。
+
+## 0.5.0 共享交互
+
+移除控制权开关，用户随时可操作网页。AI 操作优先于排队的用户输入，不强行中断已开始的动作。每次 AI 调用更新画面版本；旧版本的用户输入不会在 AI 改变页面后继续执行，而是提示确认新画面后重试。暂停预览时不接收网页输入，恢复预览即可继续。

@@ -98,6 +98,10 @@ npm tarball 包含预构建 `dist/` 和 patch，不要求消费者编译。当�
 
 双端插件必须导出 `./package.json`，以支持 rc.2 client-modules 在无 loader internal resolver 环境中的 manifest 查找路径。该发现失败会静默跳过客户端，单测直接挂载客户端组件无法覆盖，需单独验证包级解析。
 
-### 人工交互（0.3.0）
+### 人工交互（0.3.0，历史设计）
 
 预览路由新增同源 POST 操作，校验动作类型及参数，点击坐标按截图尺寸归一化，页面以稳定 ID 标识。take/release 和输入操作与 agent 工具共享每个连接的队列；manual 状态阻止后续 agent 浏览器调用。输入不经过模型工具管线，不写入插件日志；关闭面板保持接管状态，必须显式交还。测试覆盖真实网页登录及交还后的 Cookie 共享，不能等同于外部网站或完整桌面端验证。
+
+### AI 优先共享队列（0.5.0）
+
+移除 manual/take/release。每个连接拥有 AI 与用户两条队列，当前动作结束后先取 AI 队列。AI 调用前后更新 revision；frame 返回截图开始前的 revision，POST 传入 `{action, revision}`，执行用户动作前核对版本。旧画面输入拒绝执行，避免 AI 切换页面或焦点后输入到错误位置。关闭连接时中止并排空队列。

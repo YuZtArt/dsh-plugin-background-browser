@@ -5,6 +5,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import { BrowserSession, type BrowserFrame } from './browser-session.js'
 
+import { InteractionQueue } from './interaction-queue.js'
 import type { BrowserAction } from './protocol.js'
 
 interface Options {
@@ -19,16 +20,17 @@ interface Options {
 interface Connection {
   scope: { ctx: Context; dispose(): Promise<unknown> }
   ready: Promise<void>
-  manual: boolean
+  revision: number
+  agentPending: number
   initialized: boolean
-  tail: Promise<void>
+  queue: InteractionQueue
   controller: AbortController
   close: () => Promise<void>
   browser?: BrowserSession
 }
 
 /** rc.2 emits agent/created synchronously; gate prompt assembly instead. */
-export function mountSessionMcp(ctx: Context, options: Options): { frame(sessionId: string): Promise<BrowserFrame>; action(sessionId: string, action: BrowserAction): Promise<void> } {
+export function mountSessionMcp(ctx: Context, options: Options): { frame(sessionId: string): Promise<BrowserFrame>; action(sessionId: string, action: BrowserAction, revision: number): Promise<void> } {
   const connections = new Map<Agent, Connection>()
   const prefix = `mcp__${options.name}__`
   let stopping = false
@@ -43,13 +45,13 @@ export function mountSessionMcp(ctx: Context, options: Options): { frame(session
     const controller = new AbortController()
     let closing: Promise<void> | undefined
     const entry: Connection = {
-      scope, controller, manual: false, initialized: false, tail: Promise.resolve(), ready: Promise.resolve(),
+      scope, controller, revision: 0, agentPending: 0, initialized: false, queue: new InteractionQueue(), ready: Promise.resolve(),
       close() {
         return closing ??= (async () => {
           controller.abort(new Error('background-browser: session closed'))
           await scope.dispose()
           await entry.ready.catch(() => {})
-          await entry.tail
+          await entry.queue.idle()
           await entry.browser?.close()
           connections.delete(agent)
         })()
@@ -104,33 +106,30 @@ export function mountSessionMcp(ctx: Context, options: Options): { frame(session
     if (!entry || !entry.initialized || stopping) throw new Error('background-browser: tool belongs to another session')
     const original = exec.signal
     const signal = AbortSignal.any([original, entry.controller.signal])
-    const task = entry.tail.then(async () => {
+    entry.agentPending++
+    const task = entry.queue.run('agent', async () => {
       signal.throwIfAborted()
-      if (entry.manual) throw new Error('User is controlling the browser. Wait until they return control and ask you to continue.')
+      entry.revision++
       exec.signal = signal
-      try { return await next() } finally { exec.signal = original }
+      try { return await next() } finally { exec.signal = original; entry.revision++ }
     })
-    entry.tail = task.then(() => {}, () => {})
-    return task
+    return task.finally(() => { entry.agentPending-- })
   })
   return {
-    async action(sessionId, action) {
+    async action(sessionId, action, revision) {
       const entry = [...connections].find(([agent]) => agent.session.id === sessionId)?.[1]
       if (!entry?.initialized || stopping) throw new Error('Browser session is not active')
-      const task = entry.tail.then(async () => {
+      await entry.queue.run('user', async () => {
         entry.controller.signal.throwIfAborted()
-        if (action.type === 'take') { entry.manual = true; return }
-        if (action.type === 'release') { entry.manual = false; return }
-        if (!entry.manual) throw new Error('Take control before interacting')
-        await entry.browser!.interact(action as Exclude<BrowserAction, { type: 'take' | 'release' }>)
+        if (revision !== entry.revision) throw new Error('助手已更新页面，请确认新画面后重试操作。')
+        await entry.browser!.interact(action)
       })
-      entry.tail = task.then(() => {}, () => {})
-      await task
     },
     async frame(sessionId) {
       const entry = [...connections].find(([agent]) => agent.session.id === sessionId)?.[1]
       if (!entry?.initialized || stopping || entry.controller.signal.aborted) return { status: 'idle', tabs: [], selected: -1 }
-      return { ...await entry.browser!.frame(), manual: entry.manual }
+      const revision = entry.revision
+      return { ...await entry.browser!.frame(), revision, agentBusy: entry.agentPending > 0 }
     },
   }
 }

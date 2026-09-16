@@ -5,7 +5,7 @@ import { parseAction } from './protocol.js'
 
 export const previewPath = '/api/dsh-background-browser/frame'
 
-export function registerPreview(ctx: Context, frame: (sessionId: string) => Promise<BrowserFrame>, action: (sessionId: string, action: BrowserAction) => Promise<void>): void {
+export function registerPreview(ctx: Context, frame: (sessionId: string) => Promise<BrowserFrame>, action: (sessionId: string, action: BrowserAction, revision: number) => Promise<void>): void {
   ctx.webServer.register({
     kind: 'exact', path: previewPath,
     async handler(req, res) {
@@ -32,8 +32,14 @@ export function registerPreview(ctx: Context, frame: (sessionId: string) => Prom
             if (size > 65536) { res.writeHead(413).end(); return }
           }
           let input: BrowserAction
-          try { input = parseAction(JSON.parse(Buffer.concat(chunks).toString('utf8'))) } catch { res.writeHead(400).end(JSON.stringify({ error: 'Invalid browser action' })); return }
-          await action(sessionId, input)
+          let revision: number
+          try {
+            const request = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+            input = parseAction(request.action)
+            revision = request.revision
+            if (!Number.isSafeInteger(revision) || revision < 0) throw new Error('Invalid revision')
+          } catch { res.writeHead(400).end(JSON.stringify({ error: 'Invalid browser action' })); return }
+          await action(sessionId, input, revision)
           res.end(JSON.stringify({ ok: true }))
           return
         }

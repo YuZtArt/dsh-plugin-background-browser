@@ -2,12 +2,12 @@ export interface BrowserFrame {
   status: 'idle' | 'ready'
   tabs: { id: string; index: number; title: string; url: string }[]
   selected: number
-  manual?: boolean
+  revision?: number
+  agentBusy?: boolean
   image?: string
 }
 
 export type BrowserAction =
-  | { type: 'take' | 'release' }
   | { type: 'click'; pageId: string; x: number; y: number }
   | { type: 'scroll'; pageId: string; dx: number; dy: number }
   | { type: 'text'; pageId: string; text: string }
@@ -19,7 +19,6 @@ export type BrowserAction =
 export function parseAction(value: unknown): BrowserAction {
   if (!value || typeof value !== 'object') throw new Error('Invalid action')
   const a = value as Record<string, unknown>
-  if (a.type === 'take' || a.type === 'release') return { type: a.type }
   if (a.type === 'new') return { type: 'new' }
   if (typeof a.pageId !== 'string') throw new Error('Missing pageId')
   if (a.type === 'navigate' && typeof a.url === 'string' && a.url.length <= 8192) {

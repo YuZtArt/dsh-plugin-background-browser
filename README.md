@@ -4,13 +4,13 @@
 
 让 DeepSeek Harness 助手直接操作隐藏的浏览器，无需手动打开 Chrome。项目采用 DSH 的 **Cordis 插件机制**，不是 DeepSeek API 客户端。
 
-当前浏览器插件版本：**0.4.0** · 目标宿主：**DSH 0.1.5-rc.2**。
+当前浏览器插件版本：**0.5.0** · 目标宿主：**DSH 0.1.5-rc.2**。
 
 ## 功能与当前状态
 
 - **后台网页操作**：导航、读取页面、点击、输入、标签页管理、JavaScript 求值和截图，复用 Playwright MCP 工具。
 - **会话隔离**：每个活动 agent 独立浏览器和 Cookie，跨轮次保留状态，卸载时清理。
-- **侧栏交互（实验性）**：在 DSH 原生右侧栏注册「浏览器」卡片，约每 750ms 刷新当前网页截图；支持人工接管、点击、输入、滚动和标签页管理；提供地址栏、后退、前进与刷新。
+- **侧栏交互（实验性）**：在 DSH 原生右侧栏注册「浏览器」卡片，约每 750ms 刷新当前网页截图；支持直接点击、输入、滚动和标签页管理；提供地址栏、后退、前进与刷新。
 - **桌面运行兼容处理**：MCP 子进程显式启用 Electron-as-node，并使用宿主 agent 作用域避免工具撞名。
 
 **验证状态：** 侧栏交互与导航已通过真实浏览器组件集成测试；完整 Desktop 2.0.10 运行流程仍待实机验证。
@@ -23,7 +23,7 @@
 
 ![浏览器预览](packages/browser/assets/preview.png)
 
-![人工接管](packages/browser/assets/manual-control.png)
+![共享交互](packages/browser/assets/manual-control.png)
 
 ## 环境要求
 
@@ -38,13 +38,13 @@
 
 ## 安装
 
-从 [GitHub Release 下载预构建安装包](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/download/v0.4.0/dsh-plugin-background-browser-0.4.0.tgz)，或按下方步骤自行构建。**安装到桌面客户端实际使用的 profile**，并使用相同的 DSH_HOME 和用户账户。不要另外创建一个 profile 后期待它出现在现有桌面端。
+从 [GitHub Release 下载预构建安装包](https://github.com/YuZtArt/dsh-plugin-background-browser/releases/download/v0.5.0/dsh-plugin-background-browser-0.5.0.tgz)，或按下方步骤自行构建。**安装到桌面客户端实际使用的 profile**，并使用相同的 DSH_HOME 和用户账户。不要另外创建一个 profile 后期待它出现在现有桌面端。
 
 在能调用该桌面环境 DSH CLI 的 PowerShell 中：
 
 ```powershell
 $desktopProfile = '替换为当前档案名称'
-$pluginPackage = (Resolve-Path ./dsh-plugin-background-browser-0.4.0.tgz).Path
+$pluginPackage = (Resolve-Path ./dsh-plugin-background-browser-0.5.0.tgz).Path
 dsh plugin --profile $desktopProfile add $pluginPackage
 # 仅首次安装浏览器时需要；已经安装成功则跳过。
 dsh plugin --profile $desktopProfile exec dsh-browser-install
@@ -58,13 +58,13 @@ dsh plugin --profile $desktopProfile exec dsh-browser-install
 
 > 使用后台浏览器打开 https://example.com，读取页面标题并截图。
 
-查看画面时，展开原生右侧栏，点击 `＋`，在「开始」页选择「浏览器」。登录时点击「接管浏览器」，再点击网页输入框。可直接键盘输入；中文或密码可点击地址栏旁的键盘图标，展开输入面板后发送到网页当前焦点。
+查看画面时，展开原生右侧栏，点击 `＋`，在「开始」页选择「浏览器」。可直接点击网页输入框。可直接键盘输入；中文或密码可点击地址栏旁的键盘图标，展开输入面板后发送到网页当前焦点。
 
-接管期间助手的浏览器工具会被阻止；登录完成后点击「交还助手」，并在对话中告诉助手继续。不要把密码发到聊天里。关闭面板不会自动交还控制权，需要重新打开后交还。
+无需选择控制权，AI 与用户共享浏览器。排队时 AI 操作优先；已开始的单次操作执行完再切换。AI 改变页面后，基于旧画面的输入会提示重试。登录完成后在对话中告诉助手继续，不要把密码发到聊天里。
 
 若只有「工作区文件」卡片，说明浏览器前端入口尚未出现在当前界面；后台工具成功并不代表前端已加载。先确认安装版本、当前 profile 和完整重启，再检查客户端加载日志。详细说明见 [浏览器插件文档](packages/browser/README.md)。
 
-「更多选项」中可暂停预览、切换网页原始大小或全屏查看。地址栏仅在接管后可导航，支持 HTTP/HTTPS 网址；暂不提供搜索和下载管理。
+「更多选项」中可暂停预览、切换网页原始大小或全屏查看。地址栏可直接导航，支持 HTTP/HTTPS 网址；暂不提供搜索和下载管理。
 
 ## 从源码构建
 
@@ -98,7 +98,7 @@ CHANGELOG.md                版本变更
 
 ## 验证范围与限制
 
-已验证首次提示词包含工具、多会话与子 agent 同名工具注册、页面操作、Cookie 隔离、截图、预览组件和卸载清理。客户端组件测试使用模拟槽位注册器；完整桌面应用、真实模型自主执行及第三方网站登录/验证码兼容性不在已验证范围内。0.3.0 已在本地登录页验证人工点击、中文密码输入、键盘选择、滚动、提交及交还后的登录 Cookie 共享。文件上传、拖拽和系统通行密钥暂不支持。
+已验证首次提示词包含工具、多会话与子 agent 同名工具注册、页面操作、Cookie 隔离、截图、预览组件和卸载清理。客户端组件测试使用模拟槽位注册器；完整桌面应用、真实模型自主执行及第三方网站登录/验证码兼容性不在已验证范围内。已在本地登录页验证人工点击、中文密码输入、键盘选择、滚动、提交及与 AI 共享登录 Cookie。文件上传、拖拽和系统通行密钥暂不支持。
 
 浏览器登录状态不会在宿主重启或会话恢复后恢复。插件不绕过 DSH 工具授权流程，也不提供 API key。
 
