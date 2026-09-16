@@ -1,0 +1,5 @@
+- insert:
+    - id: dshplugins-background-browser
+      name: dsh-plugin-background-browser
+      config:
+        toolCallTimeoutMs: 60000

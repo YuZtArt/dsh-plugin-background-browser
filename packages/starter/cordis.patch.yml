@@ -1,0 +1,5 @@
+- insert:
+    - id: dshplugins-starter
+      name: dsh-plugin-starter
+      config:
+        greeting: Hello

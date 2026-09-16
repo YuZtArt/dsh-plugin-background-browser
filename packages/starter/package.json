@@ -1,0 +1,26 @@
+{
+  "name": "dsh-plugin-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DeepSeek Harness plugin development starter",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "cordis.patch.yml", "README.md"],
+  "engines": {"node": "^22.19.0 || >=24.0.0"},
+  "dsh": {"bundle": {"patch": "./cordis.patch.yml"}},
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {"@deepseek-ai/cordis": "4.0.2"},
+  "dependencies": {"@deepseek-ai/schemastery": "3.18.2"}
+}

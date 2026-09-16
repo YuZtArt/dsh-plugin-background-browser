@@ -1,0 +1,59 @@
+{
+  "name": "dsh-plugin-background-browser",
+  "version": "0.2.2",
+  "private": true,
+  "description": "Session-owned headless browser for DeepSeek Harness",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": "./dist/client.cjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "cordis.patch.yml",
+    "playwright.config.json",
+    "README.md"
+  ],
+  "bin": {
+    "dsh-browser-install": "./dist/install.js"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node build-client.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "browser:install": "playwright install chromium-headless-shell",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@playwright/mcp": "0.0.80",
+    "@deepseek-ai/schemastery": "3.18.2",
+    "playwright": "1.63.0-alpha-2026-08-31"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh-agent": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-tools": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-mcp-client": "0.1.5-rc.2"
+  }
+}
