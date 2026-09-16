@@ -1,4 +1,6 @@
-# DSH 后台浏览器插件
+# DSH Background Browser · 后台浏览器插件
+
+`dsh-plugin-background-browser` · [GitHub 仓库](https://github.com/YuZtArt/dsh-plugin-background-browser)
 
 让 DeepSeek Harness 助手直接操作隐藏的浏览器，无需手动打开 Chrome。项目采用 DSH 的 **Cordis 插件机制**，不是 DeepSeek API 客户端。
 
