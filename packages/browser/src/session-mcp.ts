@@ -5,6 +5,8 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import { BrowserSession, type BrowserFrame } from './browser-session.js'
 
+import type { BrowserAction } from './protocol.js'
+
 interface Options {
   name: string
   command: string
@@ -17,6 +19,7 @@ interface Options {
 interface Connection {
   scope: { ctx: Context; dispose(): Promise<unknown> }
   ready: Promise<void>
+  manual: boolean
   initialized: boolean
   tail: Promise<void>
   controller: AbortController
@@ -25,7 +28,7 @@ interface Connection {
 }
 
 /** rc.2 emits agent/created synchronously; gate prompt assembly instead. */
-export function mountSessionMcp(ctx: Context, options: Options): { frame(sessionId: string): Promise<BrowserFrame> } {
+export function mountSessionMcp(ctx: Context, options: Options): { frame(sessionId: string): Promise<BrowserFrame>; action(sessionId: string, action: BrowserAction): Promise<void> } {
   const connections = new Map<Agent, Connection>()
   const prefix = `mcp__${options.name}__`
   let stopping = false
@@ -40,7 +43,7 @@ export function mountSessionMcp(ctx: Context, options: Options): { frame(session
     const controller = new AbortController()
     let closing: Promise<void> | undefined
     const entry: Connection = {
-      scope, controller, initialized: false, tail: Promise.resolve(), ready: Promise.resolve(),
+      scope, controller, manual: false, initialized: false, tail: Promise.resolve(), ready: Promise.resolve(),
       close() {
         return closing ??= (async () => {
           controller.abort(new Error('background-browser: session closed'))
@@ -103,6 +106,7 @@ export function mountSessionMcp(ctx: Context, options: Options): { frame(session
     const signal = AbortSignal.any([original, entry.controller.signal])
     const task = entry.tail.then(async () => {
       signal.throwIfAborted()
+      if (entry.manual) throw new Error('User is controlling the browser. Wait until they return control and ask you to continue.')
       exec.signal = signal
       try { return await next() } finally { exec.signal = original }
     })
@@ -110,10 +114,23 @@ export function mountSessionMcp(ctx: Context, options: Options): { frame(session
     return task
   })
   return {
+    async action(sessionId, action) {
+      const entry = [...connections].find(([agent]) => agent.session.id === sessionId)?.[1]
+      if (!entry?.initialized || stopping) throw new Error('Browser session is not active')
+      const task = entry.tail.then(async () => {
+        entry.controller.signal.throwIfAborted()
+        if (action.type === 'take') { entry.manual = true; return }
+        if (action.type === 'release') { entry.manual = false; return }
+        if (!entry.manual) throw new Error('Take control before interacting')
+        await entry.browser!.interact(action as Exclude<BrowserAction, { type: 'take' | 'release' }>)
+      })
+      entry.tail = task.then(() => {}, () => {})
+      await task
+    },
     async frame(sessionId) {
       const entry = [...connections].find(([agent]) => agent.session.id === sessionId)?.[1]
       if (!entry?.initialized || stopping || entry.controller.signal.aborted) return { status: 'idle', tabs: [], selected: -1 }
-      return entry.browser!.frame()
+      return { ...await entry.browser!.frame(), manual: entry.manual }
     },
   }
 }

@@ -38,7 +38,18 @@ test('DSH tools drive a real background browser, isolate sessions and clean up',
   const server = createServer((req, res) => {
     requests.push({ url: req.url, cookie: req.headers.cookie ?? '' })
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    if (req.url === '/form') {
+    if (req.url === '/login') {
+      res.end('<!doctype html><title>Login</title><form action="/authenticated" method="post"><input type="password" name="password" aria-label="Password" style="position:absolute;left:100px;top:100px;width:200px;height:40px"><button style="position:absolute;left:100px;top:200px;width:200px;height:40px">Sign in</button></form>')
+    } else if (req.url === '/authenticated') {
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', () => {
+        if (new URLSearchParams(body).get('password') === '测试-password') {
+          res.setHeader('Set-Cookie', 'dsh_login=ok; SameSite=Lax; Path=/')
+          res.end('<!doctype html><title>Signed in</title><body style="height:2400px"><h1>Signed in</h1></body>')
+        } else { res.statusCode = 401; res.end('Wrong password') }
+      })
+    } else if (req.url === '/form') {
       res.setHeader('Set-Cookie', 'dsh_test=first; SameSite=Lax; Path=/')
       res.end('<!doctype html><title>Background browser test</title><form action="/submit"><label>Name <input name="name"></label><button>Submit</button></form>')
     } else if (req.url.startsWith('/submit')) {
@@ -147,6 +158,43 @@ test('DSH tools drive a real background browser, isolate sessions and clean up',
     await ui.screenshot({ path: new URL('../.dsh/browser-panel-preview.png', import.meta.url).pathname.replace(/^\/(?=[A-Z]:)/, '') })
     await ui.getByRole('button', { name: '暂停预览' }).click()
     await ui.getByRole('button', { name: '继续预览' }).click()
+    await run(first, 'browser_navigate', { url: url + '/login' })
+    await ui.getByRole('img', { name: '网页预览：Login', exact: true }).waitFor()
+    async function uiAction(action) {
+      const response = ui.waitForResponse(r => r.request().method() === 'POST' && r.url().includes('/api/dsh-background-browser/frame'))
+      await action()
+      assert.equal((await response).status(), 200)
+    }
+    await uiAction(() => ui.getByRole('button', { name: '接管浏览器', exact: true }).click())
+    await ui.getByRole('button', { name: '交还助手', exact: true }).waitFor()
+    const blocked = await ctx.tools.execute({ agent: first.agent, name: 'mcp__playwright-mcp__browser_navigate', arguments: { url: url + '/inspect' }, callId: ToolCallId('blocked-manual'), signal: AbortSignal.timeout(30000) }).catch(error => ({ message: error.message }))
+    assert.match(JSON.stringify(blocked), /User is controlling the browser/)
+    async function imageClick(x, y) {
+      const picture = ui.getByRole('img')
+      const box = await picture.boundingBox()
+      await uiAction(() => picture.click({ position: { x: box.width * x / 1280, y: box.height * y / 800 } }))
+    }
+    await imageClick(150, 120)
+    await ui.getByLabel('输入到网页').fill('wrong')
+    await uiAction(() => ui.getByRole('button', { name: '输入', exact: true }).click())
+    await imageClick(150, 120)
+    await uiAction(() => ui.getByRole('img').press('Control+a'))
+    await ui.getByLabel('输入到网页').fill('测试-password')
+    await uiAction(() => ui.getByRole('button', { name: '输入', exact: true }).click())
+    assert.equal(await ui.getByLabel('输入到网页').inputValue(), '')
+    await imageClick(150, 220)
+    await ui.getByRole('img', { name: '网页预览：Signed in', exact: true }).waitFor()
+    await uiAction(() => ui.getByRole('img').dispatchEvent('wheel', { deltaX: 0, deltaY: 400 }))
+    await uiAction(() => ui.getByRole('button', { name: '交还助手', exact: true }).click())
+    await ui.getByRole('button', { name: '接管浏览器', exact: true }).waitFor()
+    assert.match(await run(first, 'browser_snapshot'), /Signed in/)
+    assert.match(await run(first, 'browser_evaluate', { function: '() => window.scrollY > 0' }), /true/)
+    await run(first, 'browser_navigate', { url: url + '/inspect' })
+    assert.match(await run(first, 'browser_snapshot'), /dsh_login=ok/)
+    const rejectedInput = await fetch(`${previewOrigin}/api/dsh-background-browser/frame?sessionId=background-first`, {
+      method: 'POST', headers: { ...previewHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'text', pageId: '1', text: 'should not type' }),
+    })
+    assert.equal(rejectedInput.status, 503)
     await ui.evaluate(() => window.showSession('unrelated-session'))
     await ui.getByText('让助手打开网页后，画面会显示在这里。').waitFor()
     assert.equal(await ui.getByRole('img').count(), 0)

@@ -4,7 +4,7 @@
 
 ## 安装
 
-插件 **0.2.2** 适配 **DSH 0.1.5-rc.2**，不需要升级到 alpha。需要 Node 22.19+ 或 24+。所有 DSH 依赖均固定为 rc.2，不混用 alpha 包；此前插件 0.1.0 是 alpha 版本用包，请改装 0.2.1。
+插件 **0.3.0** 适配 **DSH 0.1.5-rc.2**，不需要升级到 alpha。需要 Node 22.19+ 或 24+。所有 DSH 依赖均固定为 rc.2，不混用 alpha 包；此前插件 0.1.0 是 alpha 版本用包，请改装 0.2.1。
 
 在本项目中：
 
@@ -23,7 +23,7 @@ npm run pack:browser
 ```powershell
 # 仅新 profile 第一次执行；dump-config 不启动应用。
 dsh --profile browser-dev --from-default-profile web --dump-config
-dsh plugin --profile browser-dev add C:/path/to/dsh-plugin-background-browser-0.2.2.tgz
+dsh plugin --profile browser-dev add C:/path/to/dsh-plugin-background-browser-0.3.0.tgz
 # 在运行 DSH 的同一用户账户下安装浏览器，仅首次需要。
 dsh plugin --profile browser-dev exec dsh-browser-install
 dsh --profile browser-dev --dump-config
@@ -42,13 +42,13 @@ dsh --profile browser-dev --no-open
 
 ```powershell
 $desktopProfile = '替换为桌面客户端当前档案名'
-dsh plugin --profile $desktopProfile add C:/path/to/dsh-plugin-background-browser-0.2.2.tgz
+dsh plugin --profile $desktopProfile add C:/path/to/dsh-plugin-background-browser-0.3.0.tgz
 dsh plugin --profile $desktopProfile exec dsh-browser-install
 ```
 
 命令须使用与桌面端相同的 DSH_HOME、用户账户和兼容 Node。安装后重启桌面端 DSH 服务，在会话原生右侧栏的新增标签页/引导入口选择「浏览器」，让助手打开网页即可观看。若启用了替代原生右侧栏的扩展，需确认它仍保留原生标签页入口；尚未在用户实际安装的桌面客户端验证该组合。
 
-面板显示当前网址、标签页和约每 750ms 更新的截图，提供暂停/继续和刷新。它是模型所操作页面的只读预览，不是可交互 WebView 或视频流；点击截图不能操作网页。收起或关闭面板不终止后台任务，切换会话后跟随对应浏览器。登录和验证码的人工接管尚未实现。
+面板显示当前网址、标签页和约每 750ms 更新的截图，提供暂停/继续和刷新。0.3.0 支持接管后通过截图坐标操作同一个浏览器，包括点击、键盘输入、粘贴、滚动和标签页切换。收起或关闭面板不终止后台任务，切换会话后跟随对应浏览器。登录时点击「接管浏览器」，完成后点击「交还助手」并通知助手继续；关闭面板不会自动交还控制权。中文及密码可通过上方遮罩输入框输入到网页当前焦点，输入内容不进入聊天工具参数。第三方验证码兼容性仍取决于网站；不支持文件上传、拖拽或系统通行密钥。
 
 ## 配置
 
@@ -77,7 +77,7 @@ dsh plugin --profile $desktopProfile exec dsh-browser-install
 - 浏览器工具在 Session 首次组装模型提示词时连接，组装会等待工具就绪；同时启动隐藏的浏览器引擎。
 - 一个活动 Session 的多个轮次共享页面和 Cookie；不同 Session 隔离。
 - 关闭 Session 或卸载插件会关闭自有资源；重启、恢复或 fork 不恢复浏览器登录状态。
-- 登录、验证码等需要人工操作的网页可能阻塞任务；本版没有可视化接管面板。
+- 登录、验证码等需要人工操作的网页可能阻塞任务；可通过侧栏人工接管，第三方网站登录兼容性仍需实际验证。
 - 截图可保存到文件。图片进入模型还依赖 DSH 附件存储和模型的图片输入能力。
 - 浏览器权限遵循宿主工具管线；插件不替用户绕过授权。
 
@@ -100,3 +100,9 @@ MCP 直接挂载在宿主提供的 `agent.ctx` 子生命周期中，不再通过
 增加 `exports["./package.json"]`。核对 npm 发布的 `dsh-client-modules@0.1.5-rc.2`：当宿主没有 `loader.internal.resolveSync` 时，客户端扫描器使用 `require.resolve("插件名/package.json")` 查找 manifest；此前该路径被 exports 阻止，扫描器会静默跳过前端，而后台工具仍可正常工作。新增回归测试覆盖这条解析路径。此修复尚需在用户 Desktop 2.0.10 中确认。
 
 升级后完全退出并重开桌面客户端（加载器会缓存扫描结果），点击右侧栏 `＋`，在「开始」页应看到「浏览器」卡片。若仍只有「工作区文件」，需要检查前端加载日志及实际安装版本，不必重装 Chromium。
+
+## 0.3.0 人工接管
+
+新增「接管浏览器／交还助手」。人工操作与 agent 工具共用串行队列，接管会等待已开始的工具调用结束；接管期间后续浏览器工具调用会返回等待用户的提示，不暂停整个 agent。输入使用已显示页面的稳定 ID 和相对坐标，避免标签页关闭后按旧索引操作另一个页面。
+
+测试使用本地登录表单，覆盖人工点击、中文密码输入、全选、滚动、提交、交还后模型工具读取登录 Cookie、未接管时拒绝输入。尚未验证所有外部站点或 Desktop 2.0.10 的完整运行流程。

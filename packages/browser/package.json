@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-background-browser",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
   "description": "Session-owned headless browser for DeepSeek Harness",
   "type": "module",

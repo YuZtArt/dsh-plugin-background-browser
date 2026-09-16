@@ -28,6 +28,7 @@ const guidance = [
   'After navigation or page changes, call browser_snapshot without a filename for inline page content and fresh element references, then click or fill using those references.',
   'Keep related work in this session: tabs and login state persist across turns while the session is active.',
   'Other sessions have separate browser state. Restarting or restoring a session does not restore cookies or tabs.',
+  'If the user needs to log in, ask them to take control in the browser sidebar, complete login, then return control and tell you to continue. Do not request their password in chat.',
   'Use normal user authorization rules for actions. If login, CAPTCHA, or another human step blocks progress, explain the specific blocker.',
 ].join('\n')
 
@@ -56,7 +57,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     toolCallTimeoutMs: config.toolCallTimeoutMs,
     executablePath: config.executablePath,
   })
-  ctx.inject(['webServer'], webCtx => { registerPreview(webCtx, id => sessions.frame(id)) })
+  ctx.inject(['webServer'], webCtx => { registerPreview(webCtx, id => sessions.frame(id), (id, action) => sessions.action(id, action)) })
   ctx.systemPrompt.section({
     name: 'dshplugins:background-browser',
     order: ctx.systemPrompt.getSectionOrder('TOOLS_SDK') - 1,
